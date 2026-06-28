@@ -68,11 +68,11 @@ var listCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "ID\tNAME\tVERSION\tSTATUS\tCATEGORY\tLAYER")
-		fmt.Fprintln(w, "--\t----\t-------\t------\t--------\t-----")
+		_, _ = fmt.Fprintln(w, "ID\tNAME\tVERSION\tSTATUS\tCATEGORY\tLAYER")
+		_, _ = fmt.Fprintln(w, "--\t----\t-------\t------\t--------\t-----")
 
 		for _, s := range c.Standards {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 				s.ID, s.Name, s.Version, s.Status, s.Category, s.Layer)
 		}
 		return w.Flush()
@@ -155,11 +155,11 @@ var queryCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "ID\tNAME\tVERSION\tSTATUS\tCATEGORY\tLAYER")
-		fmt.Fprintln(w, "--\t----\t-------\t------\t--------\t-----")
+		_, _ = fmt.Fprintln(w, "ID\tNAME\tVERSION\tSTATUS\tCATEGORY\tLAYER")
+		_, _ = fmt.Fprintln(w, "--\t----\t-------\t------\t--------\t-----")
 
 		for _, s := range results {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 				s.ID, s.Name, s.Version, s.Status, s.Category, s.Layer)
 		}
 		return w.Flush()

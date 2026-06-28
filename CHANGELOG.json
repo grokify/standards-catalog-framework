@@ -1,0 +1,58 @@
+{
+  "irVersion": "1.0",
+  "project": "standards-catalog-framework",
+  "repository": "https://github.com/grokify/standards-catalog-framework",
+  "versioning": "semver",
+  "commitConvention": "conventional",
+  "maintainers": ["grokify"],
+  "releases": [
+    {
+      "version": "v0.1.0",
+      "date": "2026-06-28",
+      "highlights": [
+        { "description": "Generic Go framework for creating, validating, and managing standards catalogs" },
+        { "description": "CLI tool for validating, querying, and displaying catalog data" },
+        { "description": "Comprehensive validation system with configurable options" }
+      ],
+      "added": [
+        { "description": "Core catalog types: `Catalog`, `Standard`, `CatalogMetadata`, `Implementation`, `Maintainer`" },
+        { "description": "Enum types for type safety: `StandardStatus` (draft, proposed, adopted, deprecated, retired)" },
+        { "description": "Enum types: `Category` (authentication, authorization, identity, provisioning, communication, discovery, governance)" },
+        { "description": "Enum types: `IdentityLayer` (human, agent, workload, service)" },
+        { "description": "Enum types: `ImplementationStatus` (experimental, beta, stable, deprecated)" },
+        { "description": "`Load()` function to load catalog from JSON/YAML file" },
+        { "description": "`Parse()` function to parse raw bytes with format detection" },
+        { "description": "`Save()` function to save catalog to file" },
+        { "description": "`LoadAndValidate()` function for combined load and validate operation" },
+        { "description": "`FindByID()` method to lookup standard by identifier" },
+        { "description": "`FindByCategory()` method to filter by category" },
+        { "description": "`FindByLayer()` method to filter by identity layer" },
+        { "description": "`FindByStatus()` method to filter by status" },
+        { "description": "`FindByTag()` method to filter by tags" },
+        { "description": "`FindByOrganization()` method to filter by organization" },
+        { "description": "`GetOrganizations()` method to get all unique organizations" },
+        { "description": "`GetTags()` method to get all unique tags" },
+        { "description": "Validation: required field validation" },
+        { "description": "Validation: ID format validation (lowercase, hyphens allowed)" },
+        { "description": "Validation: URL validity checking" },
+        { "description": "Validation: enum value validation for status, category, layer" },
+        { "description": "Validation: cross-reference validation (compatibleWith, supersedes, supersededBy)" },
+        { "description": "Validation: ID uniqueness validation within catalog" },
+        { "description": "Validator option: `RequireImplementations` to require at least one implementation" },
+        { "description": "Validator option: `RequireDescription` to require descriptions" },
+        { "description": "Validator option: `AllowedOrganizations` to restrict allowed organizations" },
+        { "description": "Validator option: `AllowedCategories` to restrict allowed categories" },
+        { "description": "Validator option: `AllowedLayers` to restrict allowed layers" },
+        { "description": "CLI `validate` command to validate a catalog file" },
+        { "description": "CLI `list` command to display all standards in tabular format" },
+        { "description": "CLI `show` command to display standard details as JSON" },
+        { "description": "CLI `query` command with flags: --category, --layer, --status, --org, --tag" },
+        { "description": "CLI `stats` command to show catalog statistics" },
+        { "description": "Example catalog files in testdata/" }
+      ],
+      "tests": [
+        { "description": "Comprehensive unit tests with 96%+ code coverage" }
+      ]
+    }
+  ]
+}

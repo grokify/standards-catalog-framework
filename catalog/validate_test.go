@@ -149,13 +149,13 @@ func TestValidateStandardID(t *testing.T) {
 		{"oauth2", false},
 		{"test123", false},
 		{"a", false},
-		{"INVALID", true},        // uppercase
-		{"Invalid-Id", true},     // mixed case
-		{"123invalid", true},     // starts with number
-		{"-invalid", true},       // starts with hyphen
-		{"invalid_id", true},     // underscore
-		{"invalid id", true},     // space
-		{"", true},               // empty
+		{"INVALID", true},    // uppercase
+		{"Invalid-Id", true}, // mixed case
+		{"123invalid", true}, // starts with number
+		{"-invalid", true},   // starts with hyphen
+		{"invalid_id", true}, // underscore
+		{"invalid id", true}, // space
+		{"", true},           // empty
 	}
 
 	for _, tt := range tests {
@@ -602,9 +602,9 @@ func TestValidateImplementation(t *testing.T) {
 				Layer:        LayerService,
 				Implementations: []Implementation{
 					{
-						Name:   "",            // Missing name
-						URL:    "not-a-url",   // Invalid URL
-						Status: "invalid",     // Invalid status
+						Name:   "",          // Missing name
+						URL:    "not-a-url", // Invalid URL
+						Status: "invalid",   // Invalid status
 					},
 				},
 			},

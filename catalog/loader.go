@@ -61,7 +61,7 @@ func Save(c *Catalog, path string) error {
 		return fmt.Errorf("marshal: %w", err)
 	}
 
-	return os.WriteFile(path, data, 0644)
+	return os.WriteFile(path, data, 0o600)
 }
 
 // LoadAndValidate loads a catalog and validates it.

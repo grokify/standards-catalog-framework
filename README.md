@@ -6,10 +6,35 @@ A generic Go framework for creating, validating, and managing standards catalogs
 
 Standards Catalog Framework provides:
 
-- **Schema definitions** for standards catalogs
-- **Validation tools** for catalog entries
-- **CLI tool** for catalog management
-- **Go library** for programmatic access
+- 📋 **Schema definitions** for standards catalogs
+- ✅ **Validation tools** for catalog entries
+- 🖥️ **CLI tool** for catalog management
+- 📚 **Go library** for programmatic access
+
+## Ecosystem Position
+
+```
+Standards Catalog Framework (SCF)     ← You are here
+        │
+        ▼
+Agent Standards Catalog (ASC)
+        │
+        ▼
+Open Agent Internet Architecture Framework (OAIAF)
+        │
+        ▼
+agent-protocols
+        │
+        ▼
+Generated protocol artifacts
+```
+
+| Project | Purpose |
+|---------|---------|
+| **Standards Catalog Framework** | Generic framework for any standards catalog |
+| [Agent Standards Catalog](https://github.com/aistandardsio/agent-standards-catalog) | Catalog of AI agent standards built on SCF |
+| [OAIAF](https://github.com/aistandardsio/oaiaf) | Reference architecture using cataloged standards |
+| [agent-protocols](https://github.com/aistandardsio/agent-protocols) | Go implementations of cataloged protocols |
 
 ## Installation
 
@@ -121,20 +146,85 @@ standards:
 
 ### Identity Layers
 
-- **human**: Standards for human identity (OIDC, SAML, ID-JAG)
-- **agent**: Standards for AI agent identity (AAuth)
-- **workload**: Standards for workload/service identity (SPIFFE)
-- **service**: Standards for service-to-service auth (OAuth 2.0)
+| Layer | Description | Example Standards |
+|-------|-------------|-------------------|
+| **human** | Human identity and delegation | OIDC, SAML, ID-JAG |
+| **agent** | AI agent identity | AAuth, A2A |
+| **workload** | Workload/service identity | SPIFFE, WIMSE |
+| **service** | Service-to-service auth | OAuth 2.0, mTLS |
+
+### Categories
+
+| Category | Description | Example Standards |
+|----------|-------------|-------------------|
+| **authentication** | Identity verification | AAuth, OIDC, SAML |
+| **authorization** | Access control decisions | AuthZEN, Cedar, OpenFGA |
+| **identity** | Identity representation | SPIFFE, X.509 |
+| **provisioning** | Lifecycle management | SCIM |
+| **communication** | Protocol communication | A2A, MCP |
+| **discovery** | Service/agent discovery | A2A Agent Cards |
+| **governance** | Policy and compliance | - |
+
+## Standards Organizations
+
+The framework supports standards from various organizations:
+
+| Organization | Abbreviation | Focus Area |
+|--------------|--------------|------------|
+| [Internet Engineering Task Force](https://ietf.org/) | IETF | Internet protocols, OAuth, HTTP |
+| [OpenID Foundation](https://openid.net/) | OIDF | Identity protocols, AuthZEN |
+| [Cloud Native Computing Foundation](https://cncf.io/) | CNCF | Cloud-native infrastructure, SPIFFE |
+| [Linux Foundation](https://linuxfoundation.org/) | LF | Open source projects, A2A |
+| [World Wide Web Consortium](https://w3.org/) | W3C | Web standards |
+| [OASIS](https://oasis-open.org/) | OASIS | Enterprise standards, SAML |
+| [ISO](https://iso.org/) | ISO | International standards |
+
+## Example: AI Agent Standards
+
+Standards commonly used in AI agent architectures:
+
+### Identity & Authentication
+
+| Standard | Organization | Status | Layer |
+|----------|--------------|--------|-------|
+| [AAuth](https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/) | IETF | Draft | Agent |
+| [ID-JAG](https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/) | IETF | Draft | Human |
+| [SPIFFE](https://spiffe.io/) | CNCF | Adopted | Workload |
+| [WIMSE](https://datatracker.ietf.org/wg/wimse/about/) | IETF | Draft | Workload |
+| [SCIM Agent Resource](https://datatracker.ietf.org/doc/draft-wzdk-scim-agent-resource/) | IETF | Draft | Agent |
+
+### Authorization
+
+| Standard | Organization | Status | Description |
+|----------|--------------|--------|-------------|
+| [AuthZEN](https://openid.github.io/authzen/) | OIDF | Draft | PEP-PDP communication API |
+| [Cedar](https://www.cedarpolicy.com/) | AWS | Adopted | ABAC policy language |
+| [OpenFGA](https://openfga.dev/) | CNCF | Adopted | ReBAC authorization |
+
+### Interoperability
+
+| Standard | Organization | Status | Description |
+|----------|--------------|--------|-------------|
+| [A2A](https://google.github.io/A2A/) | LF | Draft | Agent-to-Agent protocol |
+| [MCP](https://spec.modelcontextprotocol.io/) | Anthropic | Draft | Model Context Protocol |
+
+### Foundational
+
+| Standard | Organization | Status | Description |
+|----------|--------------|--------|-------------|
+| [OAuth 2.1](https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/) | IETF | Draft | Authorization framework |
+| [RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) | IETF | Adopted | HTTP Message Signatures |
+| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) | IETF | Adopted | Token Exchange |
 
 ## Validation
 
 The framework validates:
 
-- Required fields presence
-- ID uniqueness and format
-- URL validity
-- Status/category/layer enum values
-- Cross-references (compatibleWith, supersedes)
+- ✅ Required fields presence
+- ✅ ID uniqueness and format
+- ✅ URL validity
+- ✅ Status/category/layer enum values
+- ✅ Cross-references (compatibleWith, supersedes)
 
 ## License
 

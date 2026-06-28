@@ -1,0 +1,20 @@
+{
+  "apiVersion": "standards-catalog/v1",
+  "kind": "Catalog",
+  "metadata": {
+    "name": "Minimal Catalog",
+    "version": "1.0.0"
+  },
+  "standards": [
+    {
+      "id": "test-standard",
+      "name": "Test Standard",
+      "version": "1.0",
+      "status": "adopted",
+      "organization": "Test Org",
+      "specUrl": "https://example.com/spec",
+      "category": "authentication",
+      "layer": "service"
+    }
+  ]
+}

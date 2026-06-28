@@ -1,0 +1,13 @@
+apiVersion: wrong-version
+kind: WrongKind
+metadata:
+  name: ""
+standards:
+  - id: INVALID-ID
+    name: ""
+    version: ""
+    status: invalid-status
+    organization: ""
+    specUrl: not-a-url
+    category: invalid-category
+    layer: invalid-layer

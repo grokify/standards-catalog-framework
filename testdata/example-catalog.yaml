@@ -1,0 +1,100 @@
+apiVersion: standards-catalog/v1
+kind: Catalog
+metadata:
+  name: AI Agent Standards Catalog
+  version: "1.0.0"
+  description: A catalog of identity and authorization standards for AI agents
+  maintainers:
+    - name: John Wang
+      email: john@example.com
+      url: https://example.com
+standards:
+  - id: oauth2
+    name: OAuth 2.0
+    version: "2.0"
+    status: adopted
+    organization: IETF
+    specUrl: https://www.rfc-editor.org/rfc/rfc6749
+    category: authorization
+    layer: human
+    description: Industry-standard protocol for authorization
+    protocols:
+      - HTTP
+      - TLS
+    tags:
+      - token
+      - delegation
+    implementations:
+      - name: golang-oauth2
+        url: https://github.com/golang/oauth2
+        language: Go
+        status: stable
+
+  - id: oidc
+    name: OpenID Connect
+    version: "1.0"
+    status: adopted
+    organization: OpenID Foundation
+    specUrl: https://openid.net/specs/openid-connect-core-1_0.html
+    category: authentication
+    layer: human
+    description: Identity layer on top of OAuth 2.0
+    protocols:
+      - HTTP
+      - TLS
+    compatibleWith:
+      - oauth2
+    tags:
+      - identity
+      - sso
+    implementations:
+      - name: coreos-go-oidc
+        url: https://github.com/coreos/go-oidc
+        language: Go
+        status: stable
+
+  - id: spiffe
+    name: SPIFFE
+    version: "1.0"
+    status: adopted
+    organization: CNCF
+    specUrl: https://spiffe.io/docs/latest/spiffe-about/
+    category: identity
+    layer: workload
+    description: Secure Production Identity Framework for Everyone
+    protocols:
+      - gRPC
+      - mTLS
+    tags:
+      - workload-identity
+      - zero-trust
+
+  - id: aauth
+    name: Agent Authentication Protocol
+    version: "0.1"
+    status: draft
+    organization: OAIAF
+    specUrl: https://example.com/specs/aauth
+    category: authentication
+    layer: agent
+    description: Authentication protocol for AI agents
+    protocols:
+      - HTTP
+      - WebSocket
+    tags:
+      - agent
+      - ai
+
+  - id: oauth2-v3
+    name: OAuth 3.0
+    version: "3.0"
+    status: proposed
+    organization: IETF
+    specUrl: https://example.com/specs/oauth3
+    category: authorization
+    layer: human
+    description: Next generation OAuth
+    supersedes:
+      - oauth2
+    tags:
+      - next-gen

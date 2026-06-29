@@ -7,6 +7,36 @@
   "maintainers": ["grokify"],
   "releases": [
     {
+      "version": "v0.2.0",
+      "date": "2026-06-29",
+      "highlights": [
+        { "description": "Interactive D3.js web visualization for standards catalogs" },
+        { "description": "New CLI commands: `export` and `generate-web`" },
+        { "description": "Full MkDocs documentation site with Material theme" }
+      ],
+      "added": [
+        { "description": "CLI `export` command to output catalog as formatted JSON", "commit": "4cb692de66ecd9e5886110bb653491437b8b8c06" },
+        { "description": "CLI `generate-web` command to create standalone HTML visualization", "commit": "4cb692de66ecd9e5886110bb653491437b8b8c06" },
+        { "description": "Interactive D3.js visualization with graph and table views", "commit": "c84411d8a8c358506048edaec8fec45a0cac60bc" },
+        { "description": "Filter controls for layer, organization, category, and status", "commit": "c84411d8a8c358506048edaec8fec45a0cac60bc" },
+        { "description": "Color-coded identity layers (human/agent/workload/service)", "commit": "c84411d8a8c358506048edaec8fec45a0cac60bc" },
+        { "description": "MkDocs configuration with Material theme", "commit": "5cb6275e1ba42b37b02a84f8db1ab830395aedbf" },
+        { "description": "Documentation: index page with overview and quick start", "commit": "fb2a54e4cb40dbab986fa4a2cadacf082c48f684" },
+        { "description": "Documentation: getting started guide", "commit": "fb2a54e4cb40dbab986fa4a2cadacf082c48f684" },
+        { "description": "Documentation: CLI reference", "commit": "fb2a54e4cb40dbab986fa4a2cadacf082c48f684" },
+        { "description": "Documentation: library usage examples", "commit": "fb2a54e4cb40dbab986fa4a2cadacf082c48f684" },
+        { "description": "Documentation: schema reference", "commit": "fb2a54e4cb40dbab986fa4a2cadacf082c48f684" },
+        { "description": "Documentation: visualization page with embedded graph", "commit": "74ea6da42f0edfca7113f5fbc67f47f5370e4668" },
+        { "description": "Documentation: changelog page", "commit": "03aaf913b39f61a62c33ebc000813afe5e6adde6" }
+      ],
+      "changed": [
+        { "description": "README updated with web visualization documentation", "commit": "eb335077316815350d78f1c0b4912614d92f5a22" }
+      ],
+      "chore": [
+        { "description": "Add site/ directory to .gitignore", "commit": "30db221117a093061b0ca258791af564a97933a2" }
+      ]
+    },
+    {
       "version": "v0.1.0",
       "date": "2026-06-28",
       "highlights": [

@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standards Catalog Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a3a;
+            --accent-human: #00d4ff;
+            --accent-agent: #ff6b00;
+            --accent-workload: #a855f7;
+            --accent-service: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .filter-section {
+            margin-bottom: 24px;
+        }
+
+        .filter-group {
+            margin-bottom: 8px;
+        }
+
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .filter-group label:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .filter-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-human);
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .color-dot.human { background: var(--accent-human); }
+        .color-dot.agent { background: var(--accent-agent); }
+        .color-dot.workload { background: var(--accent-workload); }
+        .color-dot.service { background: var(--accent-service); }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .stats {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .stats span {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .graph-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .node:hover {
+            opacity: 0.8;
+        }
+
+        .node-label {
+            font-size: 11px;
+            fill: var(--text-primary);
+            pointer-events: none;
+            text-anchor: middle;
+        }
+
+        .link {
+            stroke-opacity: 0.4;
+            transition: stroke-opacity 0.2s;
+        }
+
+        .link.compatible {
+            stroke: #4a5568;
+            stroke-dasharray: 4,2;
+        }
+
+        .link.supersedes {
+            stroke: #ef4444;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            max-width: 320px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tooltip .org {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .tooltip .description {
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .tooltip .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tooltip .tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .tooltip .status {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .tooltip .status.adopted { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .tooltip .status.draft { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .tooltip .status.proposed { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .tooltip .status.deprecated { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .tooltip .status.retired { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+
+        .tooltip .link-btn {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 12px;
+            background: var(--accent-human);
+            color: var(--bg-primary);
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            pointer-events: auto;
+        }
+
+        .tooltip .link-btn:hover {
+            opacity: 0.9;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+
+        .legend h4 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .legend-line {
+            width: 24px;
+            height: 2px;
+        }
+
+        .legend-line.compatible {
+            background: #4a5568;
+            background: repeating-linear-gradient(
+                90deg,
+                #4a5568 0px,
+                #4a5568 4px,
+                transparent 4px,
+                transparent 6px
+            );
+        }
+
+        .legend-line.supersedes {
+            background: #ef4444;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .view-toggle button {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .view-toggle button.active {
+            background: var(--accent-human);
+            color: var(--bg-primary);
+        }
+
+        .view-toggle button:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        /* Matrix View Styles */
+        .matrix-container {
+            display: none;
+            padding: 24px;
+            overflow: auto;
+            height: 100%;
+        }
+
+        .matrix-container.visible {
+            display: block;
+        }
+
+        .matrix-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .matrix-table th {
+            background: var(--bg-tertiary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+        }
+
+        .matrix-table tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        .matrix-table .standard-name {
+            font-weight: 500;
+        }
+
+        .matrix-table .standard-name a {
+            color: var(--accent-human);
+            text-decoration: none;
+        }
+
+        .matrix-table .standard-name a:hover {
+            text-decoration: underline;
+        }
+
+        .layer-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .layer-badge.human { background: rgba(0, 212, 255, 0.2); color: var(--accent-human); }
+        .layer-badge.agent { background: rgba(255, 107, 0, 0.2); color: var(--accent-agent); }
+        .layer-badge.workload { background: rgba(168, 85, 247, 0.2); color: var(--accent-workload); }
+        .layer-badge.service { background: rgba(34, 197, 94, 0.2); color: var(--accent-service); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="filter-section">
+                <h2>Identity Layers</h2>
+                <div class="filter-group" id="layer-filters"></div>
+            </div>
+            <div class="filter-section">
+                <h2>Organizations</h2>
+                <div class="filter-group" id="org-filters"></div>
+            </div>
+            <div class="filter-section">
+                <h2>Categories</h2>
+                <div class="filter-group" id="category-filters"></div>
+            </div>
+            <div class="filter-section">
+                <h2>Status</h2>
+                <div class="filter-group" id="status-filters"></div>
+            </div>
+        </aside>
+        <main class="main-content">
+            <header class="header">
+                <h1>Standards Catalog</h1>
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <div class="stats">
+                        <div>Standards: <span id="standard-count">0</span></div>
+                        <div>Organizations: <span id="org-count">0</span></div>
+                    </div>
+                    <div class="view-toggle">
+                        <button class="active" data-view="graph">Graph</button>
+                        <button data-view="matrix">Table</button>
+                    </div>
+                </div>
+            </header>
+            <div class="graph-container" id="graph-view">
+                <svg id="graph"></svg>
+                <div class="tooltip" id="tooltip"></div>
+                <div class="legend">
+                    <h4>Relationships</h4>
+                    <div class="legend-item">
+                        <div class="legend-line compatible"></div>
+                        <span>Compatible With</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line supersedes"></div>
+                        <span>Supersedes</span>
+                    </div>
+                </div>
+            </div>
+            <div class="matrix-container" id="matrix-view">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Standard</th>
+                            <th>Organization</th>
+                            <th>Layer</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Version</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-body"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Sample catalog data - replace with actual data or load from JSON
+        const catalogData = {
+            "apiVersion": "standards-catalog/v1",
+            "kind": "Catalog",
+            "metadata": {
+                "name": "AI Agent Standards Catalog",
+                "version": "1.0.0",
+                "description": "Catalog of identity and authorization standards for AI agents"
+            },
+            "standards": [
+                {
+                    "id": "oauth2",
+                    "name": "OAuth 2.0",
+                    "version": "2.1",
+                    "status": "adopted",
+                    "organization": "IETF",
+                    "specUrl": "https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/",
+                    "category": "authorization",
+                    "layer": "human",
+                    "description": "Industry-standard protocol for authorization. OAuth 2.1 consolidates best practices.",
+                    "protocols": ["HTTP", "TLS"],
+                    "tags": ["token", "delegation", "foundational"]
+                },
+                {
+                    "id": "oidc",
+                    "name": "OpenID Connect",
+                    "version": "1.0",
+                    "status": "adopted",
+                    "organization": "OpenID Foundation",
+                    "specUrl": "https://openid.net/specs/openid-connect-core-1_0.html",
+                    "category": "authentication",
+                    "layer": "human",
+                    "description": "Identity layer on top of OAuth 2.0 for authentication.",
+                    "compatibleWith": ["oauth2"],
+                    "tags": ["identity", "sso"]
+                },
+                {
+                    "id": "id-jag",
+                    "name": "ID-JAG",
+                    "version": "04",
+                    "status": "draft",
+                    "organization": "IETF",
+                    "specUrl": "https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/",
+                    "category": "authorization",
+                    "layer": "human",
+                    "description": "OAuth 2.0 extension for cross-application access using identity assertions.",
+                    "compatibleWith": ["oauth2", "oidc"],
+                    "tags": ["delegation", "cross-app", "federation"]
+                },
+                {
+                    "id": "aauth",
+                    "name": "AAuth Protocol",
+                    "version": "02",
+                    "status": "draft",
+                    "organization": "IETF",
+                    "specUrl": "https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/",
+                    "category": "authorization",
+                    "layer": "agent",
+                    "description": "Agent authorization protocol with mission-based consent and HTTP message signatures.",
+                    "compatibleWith": ["id-jag", "spiffe"],
+                    "tags": ["agent", "authorization", "mission"]
+                },
+                {
+                    "id": "authzen",
+                    "name": "AuthZEN",
+                    "version": "1.0",
+                    "status": "draft",
+                    "organization": "OpenID Foundation",
+                    "specUrl": "https://openid.github.io/authzen/",
+                    "category": "authorization",
+                    "layer": "agent",
+                    "description": "Authorization API interoperability between PEP and PDP.",
+                    "compatibleWith": ["aauth", "oauth2"],
+                    "tags": ["agent", "authorization", "policy"]
+                },
+                {
+                    "id": "a2a",
+                    "name": "A2A Protocol",
+                    "version": "1.0",
+                    "status": "proposed",
+                    "organization": "Google",
+                    "specUrl": "https://a2a-protocol.org/",
+                    "category": "communication",
+                    "layer": "agent",
+                    "description": "Protocol for agent-to-agent communication with Agent Cards and task management.",
+                    "compatibleWith": ["mcp"],
+                    "tags": ["communication", "agent", "orchestration"]
+                },
+                {
+                    "id": "mcp",
+                    "name": "Model Context Protocol",
+                    "version": "1.0",
+                    "status": "adopted",
+                    "organization": "Anthropic",
+                    "specUrl": "https://modelcontextprotocol.io/",
+                    "category": "communication",
+                    "layer": "agent",
+                    "description": "Protocol for connecting AI models to external tools and data sources.",
+                    "compatibleWith": ["a2a"],
+                    "tags": ["tools", "context", "agent"]
+                },
+                {
+                    "id": "spiffe",
+                    "name": "SPIFFE",
+                    "version": "1.0",
+                    "status": "adopted",
+                    "organization": "CNCF",
+                    "specUrl": "https://spiffe.io/",
+                    "category": "identity",
+                    "layer": "workload",
+                    "description": "Secure Production Identity Framework for workload identity.",
+                    "tags": ["workload", "identity", "zero-trust"]
+                },
+                {
+                    "id": "aims",
+                    "name": "AIMS",
+                    "version": "draft",
+                    "status": "draft",
+                    "organization": "AIStandards.io",
+                    "specUrl": "https://aistandards.io/agent-protocols/aims/",
+                    "category": "identity",
+                    "layer": "workload",
+                    "description": "SPIFFE-based identity framework for AI agents.",
+                    "compatibleWith": ["spiffe", "aauth"],
+                    "tags": ["agent", "workload", "spiffe"]
+                },
+                {
+                    "id": "scimext",
+                    "name": "SCIM Agent Extension",
+                    "version": "draft",
+                    "status": "draft",
+                    "organization": "IETF",
+                    "specUrl": "https://datatracker.ietf.org/doc/draft-abbey-scim-agent-extension/",
+                    "category": "provisioning",
+                    "layer": "agent",
+                    "description": "SCIM schema extensions for AI agent provisioning.",
+                    "tags": ["agent", "provisioning"]
+                },
+                {
+                    "id": "jwt",
+                    "name": "JSON Web Token",
+                    "version": "RFC 7519",
+                    "status": "adopted",
+                    "organization": "IETF",
+                    "specUrl": "https://datatracker.ietf.org/doc/html/rfc7519",
+                    "category": "authentication",
+                    "layer": "service",
+                    "description": "Compact, URL-safe means of representing claims between parties.",
+                    "tags": ["token", "foundational"]
+                },
+                {
+                    "id": "http-signatures",
+                    "name": "HTTP Message Signatures",
+                    "version": "RFC 9421",
+                    "status": "adopted",
+                    "organization": "IETF",
+                    "specUrl": "https://datatracker.ietf.org/doc/html/rfc9421",
+                    "category": "authentication",
+                    "layer": "service",
+                    "description": "Standard for signing HTTP messages for integrity and authentication.",
+                    "compatibleWith": ["aauth"],
+                    "tags": ["http", "signatures", "integrity"]
+                }
+            ]
+        };
+
+        // Color scheme for layers
+        const layerColors = {
+            human: '#00d4ff',
+            agent: '#ff6b00',
+            workload: '#a855f7',
+            service: '#22c55e'
+        };
+
+        const statusColors = {
+            adopted: '#22c55e',
+            draft: '#eab308',
+            proposed: '#3b82f6',
+            deprecated: '#ef4444',
+            retired: '#6b7280'
+        };
+
+        // State
+        let filters = {
+            layers: new Set(['human', 'agent', 'workload', 'service']),
+            organizations: new Set(),
+            categories: new Set(),
+            statuses: new Set()
+        };
+        let simulation;
+        let currentView = 'graph';
+
+        // Initialize
+        function init() {
+            // Extract unique values
+            const organizations = [...new Set(catalogData.standards.map(s => s.organization))].sort();
+            const categories = [...new Set(catalogData.standards.map(s => s.category))].sort();
+            const statuses = [...new Set(catalogData.standards.map(s => s.status))];
+            const layers = ['human', 'agent', 'workload', 'service'];
+
+            // Initialize filters to include all
+            filters.organizations = new Set(organizations);
+            filters.categories = new Set(categories);
+            filters.statuses = new Set(statuses);
+
+            // Create filter UI
+            createFilters('layer-filters', layers, 'layers', true);
+            createFilters('org-filters', organizations, 'organizations');
+            createFilters('category-filters', categories, 'categories');
+            createFilters('status-filters', statuses, 'statuses');
+
+            // Update stats
+            document.getElementById('standard-count').textContent = catalogData.standards.length;
+            document.getElementById('org-count').textContent = organizations.length;
+
+            // Create visualization
+            createGraph();
+            createMatrix();
+
+            // View toggle
+            document.querySelectorAll('.view-toggle button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentView = btn.dataset.view;
+                    document.getElementById('graph-view').style.display = currentView === 'graph' ? 'block' : 'none';
+                    document.getElementById('matrix-view').classList.toggle('visible', currentView === 'matrix');
+                });
+            });
+        }
+
+        function createFilters(containerId, values, filterKey, isLayer = false) {
+            const container = document.getElementById(containerId);
+            values.forEach(value => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        filters[filterKey].add(value);
+                    } else {
+                        filters[filterKey].delete(value);
+                    }
+                    updateVisualization();
+                });
+
+                label.appendChild(checkbox);
+                if (isLayer) {
+                    const dot = document.createElement('span');
+                    dot.className = `color-dot ${value}`;
+                    label.appendChild(dot);
+                }
+                label.appendChild(document.createTextNode(capitalize(value)));
+                container.appendChild(label);
+            });
+        }
+
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function getFilteredStandards() {
+            return catalogData.standards.filter(s =>
+                filters.layers.has(s.layer) &&
+                filters.organizations.has(s.organization) &&
+                filters.categories.has(s.category) &&
+                filters.statuses.has(s.status)
+            );
+        }
+
+        function createGraph() {
+            const svg = d3.select('#graph');
+            const container = document.getElementById('graph-view');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            svg.attr('width', width).attr('height', height);
+
+            // Create groups for links and nodes
+            svg.append('g').attr('class', 'links');
+            svg.append('g').attr('class', 'nodes');
+
+            // Add zoom behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.3, 3])
+                .on('zoom', (event) => {
+                    svg.selectAll('g').attr('transform', event.transform);
+                });
+
+            svg.call(zoom);
+
+            updateGraph();
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                const newWidth = container.clientWidth;
+                const newHeight = container.clientHeight;
+                svg.attr('width', newWidth).attr('height', newHeight);
+                if (simulation) {
+                    simulation.force('center', d3.forceCenter(newWidth / 2, newHeight / 2));
+                    simulation.alpha(0.3).restart();
+                }
+            });
+        }
+
+        function updateGraph() {
+            const svg = d3.select('#graph');
+            const width = parseInt(svg.attr('width'));
+            const height = parseInt(svg.attr('height'));
+
+            const filteredStandards = getFilteredStandards();
+            const filteredIds = new Set(filteredStandards.map(s => s.id));
+
+            // Create nodes
+            const nodes = filteredStandards.map(s => ({
+                ...s,
+                radius: 24
+            }));
+
+            // Create links
+            const links = [];
+            filteredStandards.forEach(standard => {
+                (standard.compatibleWith || []).forEach(targetId => {
+                    if (filteredIds.has(targetId)) {
+                        links.push({
+                            source: standard.id,
+                            target: targetId,
+                            type: 'compatible'
+                        });
+                    }
+                });
+                (standard.supersedes || []).forEach(targetId => {
+                    if (filteredIds.has(targetId)) {
+                        links.push({
+                            source: standard.id,
+                            target: targetId,
+                            type: 'supersedes'
+                        });
+                    }
+                });
+            });
+
+            // Update simulation
+            if (simulation) simulation.stop();
+
+            simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+                .force('charge', d3.forceManyBody().strength(-400))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(40));
+
+            // Draw links
+            const linkSelection = svg.select('.links')
+                .selectAll('.link')
+                .data(links, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
+
+            linkSelection.exit().remove();
+
+            const linkEnter = linkSelection.enter()
+                .append('line')
+                .attr('class', d => `link ${d.type}`)
+                .attr('stroke-width', 2);
+
+            const linkMerge = linkEnter.merge(linkSelection);
+
+            // Draw nodes
+            const nodeSelection = svg.select('.nodes')
+                .selectAll('.node')
+                .data(nodes, d => d.id);
+
+            nodeSelection.exit().remove();
+
+            const nodeEnter = nodeSelection.enter()
+                .append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded));
+
+            nodeEnter.append('circle')
+                .attr('r', d => d.radius)
+                .attr('fill', d => layerColors[d.layer])
+                .attr('stroke', '#fff')
+                .attr('stroke-width', 2);
+
+            nodeEnter.append('text')
+                .attr('class', 'node-label')
+                .attr('dy', 4)
+                .text(d => d.name.length > 12 ? d.name.substring(0, 10) + '...' : d.name);
+
+            const nodeMerge = nodeEnter.merge(nodeSelection);
+
+            // Event handlers
+            nodeMerge
+                .on('mouseover', showTooltip)
+                .on('mouseout', hideTooltip)
+                .on('click', (event, d) => {
+                    if (d.specUrl) {
+                        window.open(d.specUrl, '_blank');
+                    }
+                });
+
+            // Update positions on tick
+            simulation.on('tick', () => {
+                linkMerge
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                nodeMerge.attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+        }
+
+        function dragStarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragEnded(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            const dot = `<span class="color-dot ${d.layer}" style="display:inline-block;width:10px;height:10px;border-radius:50%;"></span>`;
+
+            tooltip.innerHTML = `
+                <h3>${dot} ${d.name}</h3>
+                <div class="org">${d.organization} &bull; v${d.version}</div>
+                <div class="description">${d.description || 'No description available.'}</div>
+                <div class="meta">
+                    <span class="status ${d.status}">${capitalize(d.status)}</span>
+                    <span class="tag">${capitalize(d.layer)}</span>
+                    <span class="tag">${capitalize(d.category)}</span>
+                </div>
+                <a href="${d.specUrl}" class="link-btn" target="_blank">View Specification</a>
+            `;
+
+            const rect = event.target.getBoundingClientRect();
+            const containerRect = document.getElementById('graph-view').getBoundingClientRect();
+
+            let left = rect.right - containerRect.left + 10;
+            let top = rect.top - containerRect.top;
+
+            // Prevent overflow
+            if (left + 320 > containerRect.width) {
+                left = rect.left - containerRect.left - 330;
+            }
+            if (top + 200 > containerRect.height) {
+                top = containerRect.height - 210;
+            }
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        function createMatrix() {
+            updateMatrix();
+        }
+
+        function updateMatrix() {
+            const tbody = document.getElementById('matrix-body');
+            const filteredStandards = getFilteredStandards();
+
+            tbody.innerHTML = filteredStandards.map(s => `
+                <tr>
+                    <td class="standard-name">
+                        <a href="${s.specUrl}" target="_blank">${s.name}</a>
+                    </td>
+                    <td>${s.organization}</td>
+                    <td><span class="layer-badge ${s.layer}">${capitalize(s.layer)}</span></td>
+                    <td>${capitalize(s.category)}</td>
+                    <td><span class="status ${s.status}">${capitalize(s.status)}</span></td>
+                    <td>${s.version}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateVisualization() {
+            const count = getFilteredStandards().length;
+            document.getElementById('standard-count').textContent = count;
+            updateGraph();
+            updateMatrix();
+        }
+
+        // Load external catalog data if available
+        async function loadCatalogData(url) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                Object.assign(catalogData, data);
+                init();
+            } catch (error) {
+                console.log('Using embedded catalog data');
+                init();
+            }
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Try to load external data, fall back to embedded
+            const dataUrl = document.currentScript?.dataset?.catalog;
+            if (dataUrl) {
+                loadCatalogData(dataUrl);
+            } else {
+                init();
+            }
+        });
+    </script>
+</body>
+</html>

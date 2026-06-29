@@ -7,16 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [0.2.0] - 2026-06-29
+
 ### Added
 
 - `export` CLI command for JSON output
 - `generate-web` CLI command for interactive HTML visualization
 - Interactive D3.js visualization with graph and table views
-- MkDocs documentation site
+- MkDocs documentation site with Material theme
 - Filter controls for layer, organization, category, status
 - Color-coded identity layers in visualization
 
-## [0.1.0] - 2024-06-28
+### Changed
+
+- README updated with web visualization documentation
+
+## [0.1.0] - 2026-06-28
 
 ### Added
 
@@ -56,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-For detailed release notes, see the [Releases](releases/v0.1.0.md) section.
+For detailed release notes, see the Releases section.
 
-[Unreleased]: https://github.com/grokify/standards-catalog-framework/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/grokify/standards-catalog-framework/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/grokify/standards-catalog-framework/releases/tag/v0.2.0
 [0.1.0]: https://github.com/grokify/standards-catalog-framework/releases/tag/v0.1.0

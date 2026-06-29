@@ -35,6 +35,7 @@ Standards Catalog Framework provides:
 - ✅ **Validation tools** for catalog entries
 - 🖥️ **CLI tool** for catalog management
 - 📚 **Go library** for programmatic access
+- 🌐 **Web visualization** for interactive exploration
 
 ## Ecosystem Position
 
@@ -86,6 +87,41 @@ standards-catalog query catalog.yaml --category=authorization --layer=agent
 
 # Show statistics
 standards-catalog stats catalog.yaml
+
+# Export catalog as JSON
+standards-catalog export catalog.yaml > catalog.json
+
+# Generate interactive web visualization
+standards-catalog generate-web catalog.yaml -o standards-graph.html
+```
+
+### Web Visualization
+
+Generate interactive web visualizations that can be embedded in MkDocs or any HTML page:
+
+```bash
+# Generate HTML visualization with embedded data
+standards-catalog generate-web catalog.yaml -o docs/standards-graph.html
+```
+
+Features:
+
+- **Graph View**: Force-directed network showing standards and relationships
+- **Table View**: Sortable table with all standard details
+- **Filtering**: Filter by layer, organization, category, and status
+- **Color-coded**: Standards colored by identity layer (Human, Agent, Workload, Service)
+- **Interactive**: Click nodes to open specifications, drag to rearrange
+
+To embed in MkDocs, copy the generated HTML to your `docs/` folder and link to it:
+
+```markdown
+[View Standards Graph](standards-graph.html)
+```
+
+Or use an iframe:
+
+```markdown
+<iframe src="standards-graph.html" width="100%" height="800" style="border:none;"></iframe>
 ```
 
 ### Library Usage

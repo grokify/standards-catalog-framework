@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standards Catalog Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a3a;
+            --accent-human: #00d4ff;
+            --accent-agent: #ff6b00;
+            --accent-workload: #a855f7;
+            --accent-service: #22c55e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        .container { display: flex; height: 100vh; }
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .filter-section { margin-bottom: 24px; }
+        .filter-group { margin-bottom: 8px; }
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .filter-group label:hover { background: var(--bg-tertiary); }
+        .filter-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-human);
+        }
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .color-dot.human { background: var(--accent-human); }
+        .color-dot.agent { background: var(--accent-agent); }
+        .color-dot.workload { background: var(--accent-workload); }
+        .color-dot.service { background: var(--accent-service); }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header {
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .stats { display: flex; gap: 24px; font-size: 13px; color: var(--text-secondary); }
+        .stats span { color: var(--text-primary); font-weight: 600; }
+        .graph-container { flex: 1; position: relative; overflow: hidden; }
+        #graph { width: 100%; height: 100%; }
+        .node { cursor: pointer; transition: opacity 0.2s; }
+        .node:hover { opacity: 0.8; }
+        .node-label {
+            font-size: 11px;
+            fill: var(--text-primary);
+            pointer-events: none;
+            text-anchor: middle;
+        }
+        .link { stroke-opacity: 0.4; transition: stroke-opacity 0.2s; }
+        .link.compatible { stroke: #4a5568; stroke-dasharray: 4,2; }
+        .link.supersedes { stroke: #ef4444; }
+        .tooltip {
+            position: absolute;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            max-width: 320px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .tooltip.visible { opacity: 1; }
+        .tooltip h3 { font-size: 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .tooltip .org { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+        .tooltip .description { font-size: 13px; line-height: 1.5; margin-bottom: 12px; color: var(--text-secondary); }
+        .tooltip .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tooltip .tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: var(--bg-secondary); border: 1px solid var(--border-color); }
+        .tooltip .status { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 500; }
+        .tooltip .status.adopted { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .tooltip .status.draft { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .tooltip .status.proposed { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .tooltip .status.deprecated { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .tooltip .status.retired { background: rgba(107, 114, 128, 0.2); color: #6b7280; }
+        .tooltip .link-btn {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 12px;
+            background: var(--accent-human);
+            color: var(--bg-primary);
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            pointer-events: auto;
+        }
+        .tooltip .link-btn:hover { opacity: 0.9; }
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+        .legend h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 8px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px; }
+        .legend-line { width: 24px; height: 2px; }
+        .legend-line.compatible { background: repeating-linear-gradient(90deg, #4a5568 0px, #4a5568 4px, transparent 4px, transparent 6px); }
+        .legend-line.supersedes { background: #ef4444; }
+        .view-toggle { display: flex; gap: 4px; background: var(--bg-tertiary); padding: 4px; border-radius: 6px; }
+        .view-toggle button {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .view-toggle button.active { background: var(--accent-human); color: var(--bg-primary); }
+        .view-toggle button:hover:not(.active) { color: var(--text-primary); }
+        .matrix-container { display: none; padding: 24px; overflow: auto; height: 100%; }
+        .matrix-container.visible { display: block; }
+        .matrix-table { border-collapse: collapse; width: 100%; }
+        .matrix-table th, .matrix-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .matrix-table th {
+            background: var(--bg-tertiary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+        }
+        .matrix-table tr:hover td { background: var(--bg-tertiary); }
+        .matrix-table .standard-name { font-weight: 500; }
+        .matrix-table .standard-name a { color: var(--accent-human); text-decoration: none; }
+        .matrix-table .standard-name a:hover { text-decoration: underline; }
+        .layer-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .layer-badge.human { background: rgba(0, 212, 255, 0.2); color: var(--accent-human); }
+        .layer-badge.agent { background: rgba(255, 107, 0, 0.2); color: var(--accent-agent); }
+        .layer-badge.workload { background: rgba(168, 85, 247, 0.2); color: var(--accent-workload); }
+        .layer-badge.service { background: rgba(34, 197, 94, 0.2); color: var(--accent-service); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="filter-section">
+                <h2>Identity Layers</h2>
+                <div class="filter-group" id="layer-filters"></div>
+            </div>
+            <div class="filter-section">
+                <h2>Organizations</h2>
+                <div class="filter-group" id="org-filters"></div>
+            </div>
+            <div class="filter-section">
+                <h2>Categories</h2>
+                <div class="filter-group" id="category-filters"></div>
+            </div>
+            <div class="filter-section">
+                <h2>Status</h2>
+                <div class="filter-group" id="status-filters"></div>
+            </div>
+        </aside>
+        <main class="main-content">
+            <header class="header">
+                <h1 id="catalog-title">Standards Catalog</h1>
+                <div style="display: flex; align-items: center; gap: 24px;">
+                    <div class="stats">
+                        <div>Standards: <span id="standard-count">0</span></div>
+                        <div>Organizations: <span id="org-count">0</span></div>
+                    </div>
+                    <div class="view-toggle">
+                        <button class="active" data-view="graph">Graph</button>
+                        <button data-view="matrix">Table</button>
+                    </div>
+                </div>
+            </header>
+            <div class="graph-container" id="graph-view">
+                <svg id="graph"></svg>
+                <div class="tooltip" id="tooltip"></div>
+                <div class="legend">
+                    <h4>Relationships</h4>
+                    <div class="legend-item"><div class="legend-line compatible"></div><span>Compatible With</span></div>
+                    <div class="legend-item"><div class="legend-line supersedes"></div><span>Supersedes</span></div>
+                </div>
+            </div>
+            <div class="matrix-container" id="matrix-view">
+                <table class="matrix-table">
+                    <thead><tr><th>Standard</th><th>Organization</th><th>Layer</th><th>Category</th><th>Status</th><th>Version</th></tr></thead>
+                    <tbody id="matrix-body"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    <script>
+        const catalogData = {"apiVersion":"standards-catalog/v1","kind":"Catalog","metadata":{"name":"agent-standards","version":"1.0.0","description":"Catalog of AI agent-related standards for authentication, authorization, identity, and communication","maintainers":[{"name":"AIStandards.io","url":"https://aistandardsio.github.io"}],"lastUpdated":"0001-01-01T00:00:00Z"},"standards":[{"id":"aauth","name":"AAuth Protocol","version":"02","status":"draft","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/draft-hardt-oauth-aauth-protocol/","category":"authorization","layer":"agent","description":"Agent authorization protocol designed for autonomous AI agents.\nProvides mission-based consent, proof-of-possession, HTTP message signatures,\nand human-in-the-loop approval when needed.\n","protocols":["oauth2","http-signatures","jwt"],"implementations":[{"name":"agent-protocols (Go)","url":"https://github.com/aistandardsio/agent-protocols","language":"Go","status":"beta"}],"compatibleWith":["id-jag","spiffe"],"tags":["agent","authorization","mission","consent"]},{"id":"authzen","name":"AuthZEN Authorization API","version":"1.0","status":"draft","organization":"OpenID Foundation","specUrl":"https://openid.github.io/authzen/","category":"authorization","layer":"agent","description":"OpenID Foundation specification for authorization API interoperability.\nDefines a standard interface between Policy Enforcement Points (PEP) and\nPolicy Decision Points (PDP) for fine-grained access control decisions.\nEnables consistent authorization checks across different policy engines.\n","protocols":["rest","json"],"implementations":[{"name":"agent-protocols (Go)","url":"https://github.com/aistandardsio/agent-protocols","language":"Go","status":"beta"}],"compatibleWith":["aauth","oauth2","cedar","openfga"],"tags":["agent","authorization","policy","access-control"]},{"id":"cedar","name":"Cedar Policy Language","version":"3.0","status":"adopted","organization":"AWS","specUrl":"https://www.cedarpolicy.com/","category":"authorization","layer":"agent","description":"Attribute-based access control (ABAC) policy language from AWS.\nExpressive, analyzable, and fast policy evaluation for fine-grained\nauthorization decisions. Used by Amazon Verified Permissions.\n","protocols":["json"],"implementations":[{"name":"cedar-go","url":"https://github.com/cedar-policy/cedar-go","language":"Go","status":"stable"},{"name":"cedar (Rust)","url":"https://github.com/cedar-policy/cedar","language":"Rust","status":"stable"}],"compatibleWith":["authzen"],"tags":["authorization","policy","abac","access-control"]},{"id":"openfga","name":"OpenFGA","version":"1.0","status":"adopted","organization":"CNCF","specUrl":"https://openfga.dev/","category":"authorization","layer":"agent","description":"Relationship-based access control (ReBAC) authorization system.\nInspired by Google Zanzibar, provides scalable fine-grained authorization\nbased on object relationships and user groups.\n","protocols":["grpc","rest","json"],"implementations":[{"name":"OpenFGA Server","url":"https://github.com/openfga/openfga","language":"Go","status":"stable"},{"name":"go-sdk","url":"https://github.com/openfga/go-sdk","language":"Go","status":"stable"}],"compatibleWith":["authzen"],"tags":["authorization","policy","rebac","zanzibar","access-control"]},{"id":"id-jag","name":"Identity Assertion JWT Authorization Grant","version":"04","status":"draft","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/draft-ietf-oauth-identity-assertion-authz-grant/","category":"authorization","layer":"human","description":"OAuth 2.0 extension for cross-application access using identity assertions.\nEnables delegated user identity across trusted applications without\nrequiring additional user consent. Also known as Cross-App Access (XAA).\n","protocols":["oauth2","jwt","rfc8693"],"implementations":[{"name":"agent-protocols (Go)","url":"https://github.com/aistandardsio/agent-protocols","language":"Go","status":"beta"}],"compatibleWith":["aauth","oauth2","oidc"],"tags":["delegation","cross-app","federation"]},{"id":"oidc","name":"OpenID Connect","version":"1.0","status":"adopted","organization":"OpenID Foundation","specUrl":"https://openid.net/specs/openid-connect-core-1_0.html","category":"authentication","layer":"human","description":"Identity layer on top of OAuth 2.0 for authentication.\nProvides ID tokens and UserInfo endpoint for user identity claims.\n","protocols":["oauth2","jwt"],"implementations":[{"name":"Zitadel","url":"https://github.com/zitadel/zitadel","status":"stable"},{"name":"Ory Hydra","url":"https://github.com/ory/hydra","status":"stable"}],"compatibleWith":["oauth2","id-jag"],"tags":["authentication","identity"]},{"id":"oauth2","name":"OAuth 2.0","version":"2.1","status":"adopted","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/","category":"authorization","layer":"human","description":"Industry-standard protocol for authorization.\nOAuth 2.1 consolidates best practices from OAuth 2.0 and extensions.\n","protocols":["rfc6749","rfc7636"],"implementations":[{"name":"golang.org/x/oauth2","url":"https://pkg.go.dev/golang.org/x/oauth2","language":"Go","status":"stable"}],"tags":["authorization","foundational"]},{"id":"spiffe","name":"SPIFFE","version":"1.0","status":"adopted","organization":"CNCF","specUrl":"https://spiffe.io/docs/latest/spiffe-about/spiffe-concepts/","category":"identity","layer":"workload","description":"Secure Production Identity Framework for Everyone.\nProvides workload identity through SPIFFE IDs and X.509 SVIDs.\nFoundation for zero-trust service mesh architectures.\n","protocols":["x509","mtls"],"implementations":[{"name":"SPIRE","url":"https://github.com/spiffe/spire","status":"stable"},{"name":"go-spiffe","url":"https://github.com/spiffe/go-spiffe","language":"Go","status":"stable"}],"compatibleWith":["aauth","aims"],"tags":["workload","identity","zero-trust","service-mesh"]},{"id":"aims","name":"Agent Identity in Multi-System Environments","version":"draft","status":"draft","organization":"AIStandards.io","specUrl":"https://aistandardsio.github.io/agent-protocols/aims/","category":"identity","layer":"workload","description":"SPIFFE-based identity framework for AI agents.\nExtends SPIFFE concepts for agent workloads with agent-specific metadata.\n","protocols":["spiffe","x509"],"implementations":[{"name":"agent-protocols (Go)","url":"https://github.com/aistandardsio/agent-protocols","language":"Go","status":"experimental"}],"compatibleWith":["spiffe","aauth"],"tags":["agent","workload","spiffe"]},{"id":"wimse","name":"Workload Identity in Multi-System Environments","version":"draft","status":"draft","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/draft-ietf-wimse-architecture/","category":"identity","layer":"workload","description":"IETF framework for workload identity across heterogeneous systems.\nDefines architecture for workload identity federation and attestation\nin multi-cloud and hybrid environments.\n","protocols":["x509","jwt"],"compatibleWith":["spiffe","aims"],"tags":["workload","identity","federation","multi-cloud"]},{"id":"a2a","name":"Agent-to-Agent Protocol","version":"1.0","status":"proposed","organization":"Google","specUrl":"https://a2a-protocol.org/","category":"communication","layer":"agent","description":"Protocol for agent-to-agent communication.\nDefines Agent Cards, task management, streaming, and multi-agent orchestration.\n","protocols":["json-rpc","http","sse"],"implementations":[{"name":"A2A Reference","url":"https://github.com/google/a2a","status":"experimental"},{"name":"agent-protocols (Go)","url":"https://github.com/aistandardsio/agent-protocols","language":"Go","status":"beta"}],"compatibleWith":["mcp"],"tags":["communication","agent","orchestration"]},{"id":"mcp","name":"Model Context Protocol","version":"1.0","status":"adopted","organization":"Anthropic","specUrl":"https://modelcontextprotocol.io/","category":"communication","layer":"agent","description":"Protocol for connecting AI models to external tools and data sources.\nDefines tools, resources, and prompts for model context.\n","protocols":["json-rpc","stdio","http"],"implementations":[{"name":"MCP Go SDK","url":"https://github.com/modelcontextprotocol/go-sdk","language":"Go","status":"stable"},{"name":"MCP TypeScript SDK","url":"https://github.com/modelcontextprotocol/typescript-sdk","language":"TypeScript","status":"stable"}],"compatibleWith":["a2a"],"tags":["tools","context","agent"]},{"id":"agntcy-acp","name":"AGNTCY Agent Communication Protocol","version":"draft","status":"draft","organization":"AGNTCY","specUrl":"https://agntcy.org/acp/","category":"communication","layer":"agent","description":"Agent communication protocol from AGNTCY framework.\nFocuses on agent collaboration and task delegation.\n","protocols":["http","json"],"tags":["communication","agent"]},{"id":"scim","name":"System for Cross-domain Identity Management","version":"2.0","status":"adopted","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/html/rfc7644","category":"provisioning","layer":"service","description":"Protocol for managing user identities across systems.\nProvides REST API for creating, reading, updating, and deleting identities.\n","protocols":["rest","json"],"implementations":[{"name":"go-scim","url":"https://github.com/elimity-com/scim","language":"Go","status":"stable"}],"tags":["provisioning","identity"]},{"id":"scimext-agents","name":"SCIM Extensions for Agents","version":"draft","status":"draft","organization":"AIStandards.io","specUrl":"https://aistandardsio.github.io/agent-protocols/scimext/","category":"provisioning","layer":"agent","description":"SCIM schema extensions for AI agent provisioning.\nDefines Agent and Application resource types with capabilities and skills.\n","protocols":["scim","rest"],"implementations":[{"name":"agent-protocols (Go)","url":"https://github.com/aistandardsio/agent-protocols","language":"Go","status":"experimental"}],"compatibleWith":["scim"],"tags":["agent","provisioning"]},{"id":"jwt","name":"JSON Web Token","version":"RFC 7519","status":"adopted","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/html/rfc7519","category":"authentication","layer":"service","description":"Compact, URL-safe means of representing claims between parties.\nFoundation for many authentication and authorization protocols.\n","protocols":["json","jws","jwe"],"implementations":[{"name":"golang-jwt","url":"https://github.com/golang-jwt/jwt","language":"Go","status":"stable"}],"tags":["token","foundational"]},{"id":"rfc8693","name":"OAuth 2.0 Token Exchange","version":"RFC 8693","status":"adopted","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/html/rfc8693","category":"authorization","layer":"service","description":"Protocol for exchanging one token type for another.\nEnables impersonation, delegation, and token transformation.\n","protocols":["oauth2","jwt"],"compatibleWith":["id-jag","oauth2"],"tags":["token","delegation"]},{"id":"http-signatures","name":"HTTP Message Signatures","version":"RFC 9421","status":"adopted","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/html/rfc9421","category":"authentication","layer":"service","description":"Standard for signing HTTP messages.\nProvides request integrity and authentication via cryptographic signatures.\n","protocols":["http"],"compatibleWith":["aauth"],"tags":["http","signatures","integrity"]},{"id":"oauth-metadata","name":"OAuth 2.0 Authorization Server Metadata","version":"RFC 8414","status":"adopted","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/html/rfc8414","category":"discovery","layer":"service","description":"Well-known endpoint for OAuth authorization server metadata.\nEnables dynamic discovery of endpoints, supported features, and capabilities.\n","protocols":["oauth2","json"],"tags":["discovery","oauth"]},{"id":"webfinger","name":"WebFinger","version":"RFC 7033","status":"adopted","organization":"IETF","specUrl":"https://datatracker.ietf.org/doc/html/rfc7033","category":"discovery","layer":"service","description":"Protocol for discovering information about entities using URIs.\nUsed by OIDC for issuer discovery.\n","protocols":["http","json"],"compatibleWith":["oidc"],"tags":["discovery"]},{"id":"otel-genai","name":"OpenTelemetry GenAI Semantic Conventions","version":"1.0","status":"adopted","organization":"CNCF","specUrl":"https://opentelemetry.io/docs/specs/semconv/gen-ai/","category":"observability","layer":"agent","description":"Standard semantic conventions for AI/ML workload observability.\nDefines gen_ai.* attributes for traces, metrics, and logs including\nmodel identification, token usage, and completion metadata.\nFoundation for agent observability and cost tracking.\n","protocols":["otlp","grpc","http"],"implementations":[{"name":"opentelemetry-go","url":"https://github.com/open-telemetry/opentelemetry-go","language":"Go","status":"stable"},{"name":"opentelemetry-js","url":"https://github.com/open-telemetry/opentelemetry-js","language":"TypeScript","status":"stable"}],"tags":["observability","tracing","metrics","genai","agent"]}]};
+        const layerColors = { human: '#00d4ff', agent: '#ff6b00', workload: '#a855f7', service: '#22c55e' };
+        let filters = { layers: new Set(['human', 'agent', 'workload', 'service']), organizations: new Set(), categories: new Set(), statuses: new Set() };
+        let simulation;
+
+        function init() {
+            document.getElementById('catalog-title').textContent = catalogData.metadata.name || 'Standards Catalog';
+            const organizations = [...new Set(catalogData.standards.map(s => s.organization))].sort();
+            const categories = [...new Set(catalogData.standards.map(s => s.category))].sort();
+            const statuses = [...new Set(catalogData.standards.map(s => s.status))];
+            const layers = ['human', 'agent', 'workload', 'service'];
+            filters.organizations = new Set(organizations);
+            filters.categories = new Set(categories);
+            filters.statuses = new Set(statuses);
+            createFilters('layer-filters', layers, 'layers', true);
+            createFilters('org-filters', organizations, 'organizations');
+            createFilters('category-filters', categories, 'categories');
+            createFilters('status-filters', statuses, 'statuses');
+            document.getElementById('standard-count').textContent = catalogData.standards.length;
+            document.getElementById('org-count').textContent = organizations.length;
+            createGraph();
+            createMatrix();
+            document.querySelectorAll('.view-toggle button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const view = btn.dataset.view;
+                    document.getElementById('graph-view').style.display = view === 'graph' ? 'block' : 'none';
+                    document.getElementById('matrix-view').classList.toggle('visible', view === 'matrix');
+                });
+            });
+        }
+
+        function createFilters(containerId, values, filterKey, isLayer = false) {
+            const container = document.getElementById(containerId);
+            values.forEach(value => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                checkbox.addEventListener('change', () => {
+                    checkbox.checked ? filters[filterKey].add(value) : filters[filterKey].delete(value);
+                    updateVisualization();
+                });
+                label.appendChild(checkbox);
+                if (isLayer) {
+                    const dot = document.createElement('span');
+                    dot.className = 'color-dot ' + value;
+                    label.appendChild(dot);
+                }
+                label.appendChild(document.createTextNode(capitalize(value)));
+                container.appendChild(label);
+            });
+        }
+
+        function capitalize(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
+        function getFilteredStandards() {
+            return catalogData.standards.filter(s =>
+                filters.layers.has(s.layer) && filters.organizations.has(s.organization) &&
+                filters.categories.has(s.category) && filters.statuses.has(s.status)
+            );
+        }
+
+        function createGraph() {
+            const svg = d3.select('#graph');
+            const container = document.getElementById('graph-view');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            svg.attr('width', width).attr('height', height);
+            svg.append('g').attr('class', 'links');
+            svg.append('g').attr('class', 'nodes');
+            const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', (e) => svg.selectAll('g').attr('transform', e.transform));
+            svg.call(zoom);
+            updateGraph();
+            window.addEventListener('resize', () => {
+                svg.attr('width', container.clientWidth).attr('height', container.clientHeight);
+                if (simulation) { simulation.force('center', d3.forceCenter(container.clientWidth / 2, container.clientHeight / 2)); simulation.alpha(0.3).restart(); }
+            });
+        }
+
+        function updateGraph() {
+            const svg = d3.select('#graph');
+            const width = parseInt(svg.attr('width'));
+            const height = parseInt(svg.attr('height'));
+            const filteredStandards = getFilteredStandards();
+            const filteredIds = new Set(filteredStandards.map(s => s.id));
+            const nodes = filteredStandards.map(s => ({ ...s, radius: 24 }));
+            const links = [];
+            filteredStandards.forEach(s => {
+                (s.compatibleWith || []).forEach(t => { if (filteredIds.has(t)) links.push({ source: s.id, target: t, type: 'compatible' }); });
+                (s.supersedes || []).forEach(t => { if (filteredIds.has(t)) links.push({ source: s.id, target: t, type: 'supersedes' }); });
+            });
+            if (simulation) simulation.stop();
+            simulation = d3.forceSimulation(nodes)
+                .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+                .force('charge', d3.forceManyBody().strength(-400))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(40));
+            const linkSel = svg.select('.links').selectAll('.link').data(links, d => d.source.id + '-' + d.target.id);
+            linkSel.exit().remove();
+            const linkEnter = linkSel.enter().append('line').attr('class', d => 'link ' + d.type).attr('stroke-width', 2);
+            const linkMerge = linkEnter.merge(linkSel);
+            const nodeSel = svg.select('.nodes').selectAll('.node').data(nodes, d => d.id);
+            nodeSel.exit().remove();
+            const nodeEnter = nodeSel.enter().append('g').attr('class', 'node').call(d3.drag().on('start', dragStarted).on('drag', dragged).on('end', dragEnded));
+            nodeEnter.append('circle').attr('r', d => d.radius).attr('fill', d => layerColors[d.layer]).attr('stroke', '#fff').attr('stroke-width', 2);
+            nodeEnter.append('text').attr('class', 'node-label').attr('dy', 4).text(d => d.name.length > 12 ? d.name.substring(0, 10) + '...' : d.name);
+            const nodeMerge = nodeEnter.merge(nodeSel);
+            nodeMerge.on('mouseover', showTooltip).on('mouseout', hideTooltip).on('click', (e, d) => { if (d.specUrl) window.open(d.specUrl, '_blank'); });
+            simulation.on('tick', () => {
+                linkMerge.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+                nodeMerge.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
+            });
+        }
+
+        function dragStarted(e, d) { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+        function dragged(e, d) { d.fx = e.x; d.fy = e.y; }
+        function dragEnded(e, d) { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = '<h3><span class="color-dot ' + d.layer + '" style="display:inline-block;width:10px;height:10px;border-radius:50%;"></span> ' + d.name + '</h3>' +
+                '<div class="org">' + d.organization + ' &bull; v' + d.version + '</div>' +
+                '<div class="description">' + (d.description || 'No description.') + '</div>' +
+                '<div class="meta"><span class="status ' + d.status + '">' + capitalize(d.status) + '</span><span class="tag">' + capitalize(d.layer) + '</span><span class="tag">' + capitalize(d.category) + '</span></div>' +
+                '<a href="' + d.specUrl + '" class="link-btn" target="_blank">View Specification</a>';
+            const rect = event.target.getBoundingClientRect();
+            const containerRect = document.getElementById('graph-view').getBoundingClientRect();
+            let left = rect.right - containerRect.left + 10;
+            let top = rect.top - containerRect.top;
+            if (left + 320 > containerRect.width) left = rect.left - containerRect.left - 330;
+            if (top + 200 > containerRect.height) top = containerRect.height - 210;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() { document.getElementById('tooltip').classList.remove('visible'); }
+        function createMatrix() { updateMatrix(); }
+        function updateMatrix() {
+            const tbody = document.getElementById('matrix-body');
+            tbody.innerHTML = getFilteredStandards().map(s =>
+                '<tr><td class="standard-name"><a href="' + s.specUrl + '" target="_blank">' + s.name + '</a></td>' +
+                '<td>' + s.organization + '</td><td><span class="layer-badge ' + s.layer + '">' + capitalize(s.layer) + '</span></td>' +
+                '<td>' + capitalize(s.category) + '</td><td><span class="status ' + s.status + '">' + capitalize(s.status) + '</span></td><td>' + s.version + '</td></tr>'
+            ).join('');
+        }
+        function updateVisualization() {
+            document.getElementById('standard-count').textContent = getFilteredStandards().length;
+            updateGraph();
+            updateMatrix();
+        }
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

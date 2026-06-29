@@ -1,0 +1,62 @@
+site_name: Standards Catalog Framework
+site_description: A Go framework for creating, validating, and managing standards catalogs
+site_url: https://grokify.github.io/standards-catalog-framework/
+repo_url: https://github.com/grokify/standards-catalog-framework
+repo_name: grokify/standards-catalog-framework
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: cyan
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: cyan
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide:
+      - CLI Reference: cli-reference.md
+      - Library Usage: library.md
+      - Schema Reference: schema.md
+  - Visualization: visualization.md
+  - Releases:
+      - Changelog: changelog.md
+      - v0.1.0: releases/v0.1.0.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/grokify/standards-catalog-framework
